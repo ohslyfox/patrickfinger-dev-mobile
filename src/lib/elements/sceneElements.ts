@@ -12,7 +12,7 @@ const getSceneElements = (p5: p5Types): Container[] => {
       )
     ),
     Container.getElementContainer([
-      new HoverText(p5, "résumé", "https://patrickfinger.dev/resume", -150),
+      new HoverText(p5, "résumé", "./resume.pdf", -150),
       new HoverText(p5, "projects", "https://github.com/ohslyfox", 0),
       new HoverText(
         p5,
