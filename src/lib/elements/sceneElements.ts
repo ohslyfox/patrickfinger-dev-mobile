@@ -17,7 +17,7 @@ const getSceneElements = (p5: p5Types): Container[] => {
       new HoverText(
         p5,
         "linkedin",
-        "https://www.linkedin.com/in/patrick-finger-50ab75132",
+        "https://www.linkedin.com/in/patrick-f-50ab75132",
         150
       ),
     ]),
