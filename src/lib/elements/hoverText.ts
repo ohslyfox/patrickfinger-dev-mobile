@@ -1,4 +1,4 @@
-import p5Types from "p5";
+import { P5CanvasInstance } from "@p5-wrapper/react";
 import { ColorLerp, grayScaleColors } from "../lib/colorLerp";
 import { CustomElement, Vector } from "../types/p5";
 
@@ -9,7 +9,7 @@ class HoverText implements CustomElement {
   private colorLerp: ColorLerp;
   public readonly location: Vector;
 
-  constructor(p5Types: p5Types, text: string, url: string, offset: number) {
+  constructor(p5Types: P5CanvasInstance, text: string, url: string, offset: number) {
     this.text = text;
     this.url = url;
     this.offset = offset;
@@ -20,7 +20,7 @@ class HoverText implements CustomElement {
     };
   }
 
-  public display(p5: p5Types): void {
+  public display(p5: P5CanvasInstance): void {
     const color = this.colorLerp.step();
     p5.stroke(0);
     p5.textSize(52);
@@ -32,11 +32,11 @@ class HoverText implements CustomElement {
     p5.text(this.text, this.location.x, this.location.y);
   }
 
-  private mouseIntersects(p5: p5Types): boolean {
+  private mouseIntersects(p5: P5CanvasInstance): boolean {
     return p5.dist(p5.mouseX, p5.mouseY, this.location.x, this.location.y) < 75;
   }
 
-  public mousePressed(p5: p5Types): boolean {
+  public mousePressed(p5: P5CanvasInstance): boolean {
     if (this.mouseIntersects(p5)) {
       window.open(this.url);
       return true;
@@ -44,11 +44,11 @@ class HoverText implements CustomElement {
     return false;
   }
 
-  public mouseReleased(_p5: p5Types): void {
+  public mouseReleased(_p5: P5CanvasInstance): void {
     return;
   }
 
-  public windowResized(p5: p5Types): void {
+  public windowResized(p5: P5CanvasInstance): void {
     this.location.x = p5.windowWidth / 2;
     this.location.y = p5.windowHeight / 2 + this.offset;
   }

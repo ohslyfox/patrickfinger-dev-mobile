@@ -1,4 +1,4 @@
-import p5Types from "p5";
+import { P5CanvasInstance } from "@p5-wrapper/react";
 import { ColorLerp, rainbowColors } from "../lib/colorLerp";
 import { CustomElement, Vector } from "../types/p5";
 
@@ -23,14 +23,14 @@ class Bubble implements CustomElement {
     this.lerp = new ColorLerp(rainbowColors, true, 0.01);
   }
 
-  public windowResized(p5: p5Types): void {
+  public windowResized(p5: P5CanvasInstance): void {
     if (this.boundX(p5) || this.boundY(p5)) {
       this.location.x = p5.windowWidth / 2;
       this.location.y = p5.windowHeight / 2;
     }
   }
 
-  public display(p5: p5Types): void {
+  public display(p5: P5CanvasInstance): void {
     this.move(p5);
     this.lerp.step();
     p5.fill(0, 0, 0, 0);
@@ -44,23 +44,23 @@ class Bubble implements CustomElement {
     );
   }
 
-  public mousePressed(_p5: p5Types): void {
+  public mousePressed(_p5: P5CanvasInstance): void {
     return;
   }
 
-  public mouseReleased(_p5: p5Types): void {
+  public mouseReleased(_p5: P5CanvasInstance): void {
     return;
   }
 
-  private boundX(p5: p5Types): boolean {
+  private boundX(p5: P5CanvasInstance): boolean {
     return this.location.x <= 0 || this.location.x >= p5.windowWidth;
   }
 
-  private boundY(p5: p5Types): boolean {
+  private boundY(p5: P5CanvasInstance): boolean {
     return this.location.y <= 0 || this.location.y >= p5.windowHeight;
   }
 
-  private move(p5: p5Types): void {
+  private move(p5: P5CanvasInstance): void {
     this.location.x += this.vecloity.x;
     this.location.y += this.vecloity.y;
 

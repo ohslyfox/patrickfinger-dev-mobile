@@ -1,9 +1,9 @@
-import p5Types from "p5";
+import { P5CanvasInstance } from "@p5-wrapper/react";
 import Container from "./container";
 import Bubble from "./bubble";
 import HoverText from "./hoverText";
 
-const getSceneElements = (p5: p5Types): Container[] => {
+const getSceneElements = (p5: P5CanvasInstance): Container[] => {
   return [
     Container.getElementContainer(
       Array.from(

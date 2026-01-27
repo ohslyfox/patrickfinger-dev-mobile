@@ -1,11 +1,11 @@
-import p5Types from "p5";
+import { P5CanvasInstance } from "@p5-wrapper/react";
 
 export interface Vector {
   x: number;
   y: number;
 }
 
-type p5Method = (p5: p5Types) => void;
+type p5Method = (p5: P5CanvasInstance) => void;
 
 type P5Methods = {
   display: p5Method;
