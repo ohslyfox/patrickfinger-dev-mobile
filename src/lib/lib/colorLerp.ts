@@ -6,16 +6,16 @@ export interface Color {
   b: number;
 }
 
-// Soft, near-white pastels tinted toward the galaxy backdrop's teal/blue/mauve,
-// so the particles read as gently colored starlight shaded into the gradient sky
-// rather than bold primaries.
+// Saturated galaxy tones — clearly chromatic blue/teal/violet/pink/gold while
+// staying luminous over the dark gradient sky. Deeper than the old near-white
+// pastels so the particles (and tinted SVG icons) actually read as colored.
 export const pastelGalaxyColors: Color[] = [
-  { r: 207, g: 232, b: 255 }, // pale sky blue (#cfe8ff)
-  { r: 159, g: 212, b: 255 }, // light azure (#9fd4ff)
-  { r: 180, g: 224, b: 226 }, // soft teal-white
-  { r: 200, g: 196, b: 240 }, // periwinkle lavender
-  { r: 226, g: 195, b: 224 }, // dusty mauve-pink (#b89bc4 lightened)
-  { r: 240, g: 224, b: 236 }, // warm white with a pink cast
+  { r: 96, g: 178, b: 255 }, // vivid sky blue
+  { r: 64, g: 220, b: 230 }, // bright cyan-teal
+  { r: 140, g: 130, b: 255 }, // electric periwinkle
+  { r: 196, g: 120, b: 240 }, // violet-magenta
+  { r: 255, g: 130, b: 200 }, // hot pink
+  { r: 255, g: 200, b: 130 }, // warm gold (star glow)
 ];
 
 export const grayScaleColors: Color[] = [

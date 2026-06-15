@@ -26,11 +26,13 @@ const MIN_MAGNITUDE = 0.5;
 // (and once the particles have mostly settled), gravity fades back off and the
 // particles return to free-floating. The strength eases over RESET_FADE for a
 // smooth transition rather than snapping.
-const IDLE_TIMEOUT = 10; // seconds
+const IDLE_TIMEOUT = 3; // seconds
 const RESET_FADE = 1.5; // seconds to fade gravity strength 1 → 0
-// Device rotation (deg/s, summed across axes) above which we treat the device as
-// "still being moved" and keep the idle timer reset.
-const ROTATION_THRESHOLD = 35;
+// Device rotation handling. rotationRate is noisy, so we low-pass it and only
+// treat *sustained* rotation above a high bar as a real "user is moving it"
+// signal — minor jitter/sensor noise no longer cancels a pending reset.
+const ROTATION_THRESHOLD = 90; // deg/s (summed axes), smoothed
+const ROTATION_SMOOTHING = 0.1; // low-pass factor for the rotation magnitude
 
 let listening = false;
 // Gravity is off until the first interaction: bubbles free-float and bounce, then
@@ -41,13 +43,28 @@ let idleTime = 0;
 // 1 while gravity is fully on; eases toward 0 during an idle reset so callers can
 // fade the pull out smoothly.
 let strength = 0;
+// Low-pass-filtered rotation magnitude (deg/s), so brief sensor spikes don't read
+// as the user actively moving the device.
+let rotationMag = 0;
 
 /** Whether gravity is currently influencing particles at all (strength > 0). */
 export function isGravityEnabled(): boolean {
   return enabled && strength > 0.001;
 }
 
-/** Resets the idle timer; call on any tap/interaction. */
+/**
+ * Smoothed screen-space "down" unit direction (not strength-scaled, so it stays
+ * stable during the fade). Use with {@link isGravityEnabled} to orient UI to
+ * physical down. Do not mutate the result.
+ */
+export function getGravityDirection(): Vector {
+  return current;
+}
+
+/**
+ * Resets the idle timer and restores full gravity. Call on a deliberate tap — an
+ * unambiguous interaction, so it's safe to snap strength back to 1.
+ */
 export function noteInteraction(): void {
   idleTime = 0;
   if (enabled) strength = 1;
@@ -124,13 +141,16 @@ function handleMotion(event: DeviceMotionEvent): void {
   if (!g || g.x == null || g.y == null) return;
   setFromDevice(g.x, g.y);
 
-  // Significant rotation counts as interaction: keep the idle timer reset (and
-  // re-ramp gravity) while the user is actively turning the device.
+  // Low-pass the rotation rate so only *sustained* turning reads as the user
+  // actively moving the device. Sustained rotation just keeps the idle timer
+  // reset; unlike a tap it does NOT snap gravity back to full, so a brief jiggle
+  // can't yank a settling reset back to life.
   const r = event.rotationRate;
   if (r) {
     const spin =
       Math.abs(r.alpha ?? 0) + Math.abs(r.beta ?? 0) + Math.abs(r.gamma ?? 0);
-    if (spin > ROTATION_THRESHOLD) noteInteraction();
+    rotationMag += (spin - rotationMag) * ROTATION_SMOOTHING;
+    if (rotationMag > ROTATION_THRESHOLD) idleTime = 0;
   }
 }
 

@@ -6,11 +6,9 @@ import { CustomElement, Vector } from "../types/p5";
 
 export type ParticleType = "circle" | "star" | "rocket" | "galaxy";
 
-// A drawable sprite for icon particles. We rasterize SVGs into a p5 graphics
-// buffer (see loadSvgSprite), and both p5.Image and p5.Graphics are accepted by
-// image()/tint(); the type is derived from the instance so we need no direct `p5`
-// dependency.
-export type P5Image = ReturnType<P5CanvasInstance["createGraphics"]>;
+// A tintable sprite for icon particles (a p5.Image rasterized from an SVG; see
+// loadSvgSprite). Derived from the instance so we need no direct `p5` dependency.
+export type P5Image = ReturnType<P5CanvasInstance["createImage"]>;
 
 // SVG-icon particle types render a tinted, rotated sprite instead of a vector
 // outline; map each to the loaded image supplied at construction.
@@ -33,6 +31,9 @@ const FAR_ALPHA = 90;
 const NEAR_ALPHA = 255;
 const FAR_STROKE = 1;
 const NEAR_STROKE = 2.5;
+// SVG-icon particles are drawn semi-transparent on top of the depth alpha, so
+// they glow softly rather than reading as opaque stickers.
+const SVG_OPACITY = 0.6;
 // Deeper (smaller) particles bounce within an inset boundary so they stay in the
 // background band: the farthest are held this fraction of the half-extent in from
 // each edge; the nearest reach the full edge.
@@ -286,7 +287,9 @@ class Bubble implements CustomElement {
 
   // Draws a tinted, rotated SVG sprite (rocket, galaxy) fitted to the diameter.
   // The white-filled source is tinted to the particle's pastel color, with the
-  // depth alpha applied so distant icons recede like the vector particles.
+  // depth alpha applied so distant icons recede like the vector particles. The
+  // sprite is drawn semi-transparent (SVG_OPACITY) so it reads as a soft glowing
+  // glyph rather than a solid sticker.
   private drawImage(p5: P5CanvasInstance, image: P5Image): void {
     p5.push();
     p5.translate(this.location.x, this.location.y);
@@ -296,7 +299,7 @@ class Bubble implements CustomElement {
       this.lerp.color.r,
       this.lerp.color.g,
       this.lerp.color.b,
-      this.alpha
+      this.alpha * SVG_OPACITY
     );
     p5.image(image, 0, 0, this.diameter, this.diameter);
     p5.noTint();
