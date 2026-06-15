@@ -7,6 +7,15 @@ interface Props {}
 
 const Scene: React.FC<Props> = () => {
   const sketch: Sketch = useMemo(() => (p5: P5CanvasInstance) => {
+    // Disable p5 2.x's Friendly Error System. Its sketch verifier runs a
+    // `presetup` hook that grabs the last <script> in the document and re-parses
+    // it with acorn — under a bundler that's a Turbopack chunk, not plain sketch
+    // source, so it throws "Unexpected token (1:8)". The verifier reads the flag
+    // off the p5 constructor (a documented static property), which we reach via
+    // the instance's constructor — no need to import p5 directly.
+    (p5.constructor as unknown as { disableFriendlyErrors: boolean }).disableFriendlyErrors =
+      true;
+
     let elementContainers: ElementContainer[] = [];
     p5.setup = () => {
       p5.createCanvas(p5.windowWidth, p5.windowHeight);
