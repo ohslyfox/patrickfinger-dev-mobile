@@ -56,6 +56,8 @@ const GRAVITY = 900;
 const DRAG = 0.6;
 // Fraction of speed kept on a wall bounce (1 = perfectly elastic, 0 = dead stop).
 const RESTITUTION = 0.7;
+// Bounciness of particle-vs-particle collisions (slightly springy).
+const PARTICLE_RESTITUTION = 0.85;
 // Small tangential damping on bounce so bubbles don't skate along a wall forever.
 const WALL_FRICTION = 0.92;
 // Speed ceiling (px/s) so overlapping ripple shoves can't fling a bubble off the
@@ -65,6 +67,17 @@ const MAX_SPEED = 1800;
 // TRAIL_LENGTH past positions, fading and shrinking toward the tail.
 const TRAIL_SPEED = 600;
 const TRAIL_LENGTH = 10;
+// Gentle free-float drift speed (px/s) particles ease back to when idle, and the
+// per-second rate they ease toward it.
+const FREE_FLOAT_SPEED = 70;
+const FREE_FLOAT_EASE = 0.6;
+// On returning to free-float, the inward drift heading is jittered by up to ±half
+// this (radians) so particles fan out, and each gets this outward velocity kick
+// (px/s) to spring back into motion / out of a corner.
+const FREE_FLOAT_SPREAD = Math.PI * 0.7;
+const REVIVE_KICK = 160;
+// At or below this speed (px/s) a particle counts as "still" for idle detection.
+const STILL_SPEED = 90;
 
 class Bubble implements CustomElement {
   public readonly location: Vector;
@@ -90,6 +103,12 @@ class Bubble implements CustomElement {
   private readonly strokeWeight: number;
   // Recent positions (newest last) for the high-speed motion trail.
   private readonly trail: Vector[] = [];
+  // Drift direction the particle eases toward when free-floating; re-aimed inward
+  // on the return to free-float so it doesn't drift into a wall.
+  private driftDir: Vector;
+  // Whether gravity was on last frame, to detect the moment it switches off (the
+  // return to free-float) and apply a reviving kick then.
+  private wasGravity = false;
 
   constructor(
     maxX: number,
@@ -118,6 +137,8 @@ class Bubble implements CustomElement {
     // Free-float at a steady drift until the first tap turns on gravity.
     this.velocity = { x: Math.random() * 120 - 60, y: Math.random() * 120 - 60 };
     this.acceleration = { x: 0, y: 0 };
+    const driftAngle = Math.random() * Math.PI * 2;
+    this.driftDir = { x: Math.cos(driftAngle), y: Math.sin(driftAngle) };
     this.ripples = ripples;
     this.type = type;
     this.image = images[type];
@@ -130,6 +151,90 @@ class Bubble implements CustomElement {
   /** Perspective depth in [0, 1]; smaller = farther back. Used to depth-sort. */
   public get depthValue(): number {
     return this.depth;
+  }
+
+  /** Whether the particle has mostly settled — used for idle-reset detection. */
+  public get isStill(): boolean {
+    return Math.hypot(this.velocity.x, this.velocity.y) <= STILL_SPEED;
+  }
+
+  // Free-float drift: ease the velocity toward a gentle constant speed along the
+  // particle's drift direction, so settled particles smoothly resume floating
+  // instead of freezing once gravity has faded off.
+  private applyFreeFloatDrift(dt: number): void {
+    const targetX = this.driftDir.x * FREE_FLOAT_SPEED;
+    const targetY = this.driftDir.y * FREE_FLOAT_SPEED;
+    const ease = Math.min(1, FREE_FLOAT_EASE * dt);
+    this.velocity.x += (targetX - this.velocity.x) * ease;
+    this.velocity.y += (targetY - this.velocity.y) * ease;
+  }
+
+  // On the return to free-float: aim the drift back toward the canvas interior
+  // (so a particle resting against a wall/corner heads inward, not into it) and
+  // apply an immediate outward kick so it springs back into motion.
+  private reviveFreeFloat(p5: P5CanvasInstance): void {
+    // Direction from this particle toward the canvas center.
+    let ix = p5.windowWidth / 2 - this.location.x;
+    let iy = p5.windowHeight / 2 - this.location.y;
+    const len = Math.hypot(ix, iy);
+    if (len > 0.001) {
+      ix /= len;
+      iy /= len;
+    } else {
+      ix = 0;
+      iy = -1;
+    }
+    // Jitter the inward heading so the particles fan out rather than all aiming
+    // dead-center.
+    const jitter = (Math.random() - 0.5) * FREE_FLOAT_SPREAD;
+    const cos = Math.cos(jitter);
+    const sin = Math.sin(jitter);
+    this.driftDir = { x: ix * cos - iy * sin, y: ix * sin + iy * cos };
+    // Reviving kick along the new inward drift direction.
+    this.velocity.x += this.driftDir.x * REVIVE_KICK;
+    this.velocity.y += this.driftDir.y * REVIVE_KICK;
+  }
+
+  /**
+   * Resolves a collision with another particle if they overlap: pushes them apart
+   * along the contact normal (split by inverse mass) and exchanges the normal
+   * component of their velocities as an elastic impulse, so they bounce off each
+   * other instead of passing through. Tangential motion is left untouched.
+   */
+  public collideWith(other: Bubble): void {
+    const dx = other.location.x - this.location.x;
+    const dy = other.location.y - this.location.y;
+    const distSq = dx * dx + dy * dy;
+    const minDist = this.diameter / 2 + other.diameter / 2;
+    if (distSq >= minDist * minDist || distSq === 0) return;
+
+    const dist = Math.sqrt(distSq);
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    // Separate along the normal, each moved inversely to its mass so the heavier
+    // one barely shifts.
+    const overlap = minDist - dist;
+    const invA = 1 / this.mass;
+    const invB = 1 / other.mass;
+    const totalInv = invA + invB;
+    this.location.x -= nx * overlap * (invA / totalInv);
+    this.location.y -= ny * overlap * (invA / totalInv);
+    other.location.x += nx * overlap * (invB / totalInv);
+    other.location.y += ny * overlap * (invB / totalInv);
+
+    // Relative velocity along the normal; only resolve if they're approaching.
+    const rvx = other.velocity.x - this.velocity.x;
+    const rvy = other.velocity.y - this.velocity.y;
+    const approach = rvx * nx + rvy * ny;
+    if (approach >= 0) return;
+
+    // Elastic impulse split by inverse mass (momentum conserved).
+    const impulse = (-(1 + PARTICLE_RESTITUTION) * approach) / totalInv;
+    this.velocity.x -= nx * impulse * invA;
+    this.velocity.y -= ny * impulse * invA;
+    other.velocity.x += nx * impulse * invB;
+    other.velocity.y += ny * impulse * invB;
   }
 
   public windowResized(p5: P5CanvasInstance): void {
@@ -242,7 +347,8 @@ class Bubble implements CustomElement {
     this.velocity.x += (push.x / this.mass) * dt;
     this.velocity.y += (push.y / this.mass) * dt;
 
-    if (isGravityEnabled()) {
+    const gravity = isGravityEnabled();
+    if (gravity) {
       // Gravity is an acceleration (mass-independent in free fall): all bubbles
       // fall at the same rate, but mass still governs momentum and how much drag
       // slows them.
@@ -256,9 +362,15 @@ class Bubble implements CustomElement {
       const drag = Math.exp((-DRAG / this.mass) * dt);
       this.velocity.x *= drag;
       this.velocity.y *= drag;
+    } else {
+      // On the falling edge of gravity (return to free-float), give a reviving
+      // kick aimed inward so particles spring back to life and don't sit stuck in
+      // a corner.
+      if (this.wasGravity) this.reviveFreeFloat(p5);
+      // Free-float: keep a gentle drift so settled particles don't freeze.
+      this.applyFreeFloatDrift(dt);
     }
-    // Before the first tap there's no gravity or drag: the bubble keeps its drift
-    // speed and simply bounces around the canvas (aside from ripple shoves).
+    this.wasGravity = gravity;
 
     // Cap speed so overlapping waves can't fling a bubble off-canvas in one frame.
     const speed = Math.hypot(this.velocity.x, this.velocity.y);
@@ -337,6 +449,19 @@ class Bubble implements CustomElement {
       spinKick -= (this.velocity.x / r) * SPIN_TRANSFER * 60;
       this.velocity.x *= WALL_FRICTION;
       hit = true;
+    }
+
+    // Re-aim free-float drift inward off any wall it's against, so the gentle
+    // drift never keeps pushing a particle into a wall/corner (which would pin it).
+    if (this.location.x <= minX && this.driftDir.x < 0) {
+      this.driftDir.x = -this.driftDir.x;
+    } else if (this.location.x >= maxX && this.driftDir.x > 0) {
+      this.driftDir.x = -this.driftDir.x;
+    }
+    if (this.location.y <= minY && this.driftDir.y < 0) {
+      this.driftDir.y = -this.driftDir.y;
+    } else if (this.location.y >= maxY && this.driftDir.y > 0) {
+      this.driftDir.y = -this.driftDir.y;
     }
 
     const freshImpact = hit && !this.touchingWall && impact > IMPACT_SPEED;

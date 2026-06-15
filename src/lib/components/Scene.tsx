@@ -1,7 +1,14 @@
 import React, { useMemo } from "react";
 import { P5Canvas, P5CanvasInstance, Sketch } from "@p5-wrapper/react";
-import getSceneElements, { Scene as SceneGraph } from "../elements/sceneElements";
-import { startGravityTracking } from "../lib/gravity";
+import getSceneElements, {
+  Scene as SceneGraph,
+  resolveCollisions,
+} from "../elements/sceneElements";
+import {
+  startGravityTracking,
+  noteInteraction,
+  updateGravity,
+} from "../lib/gravity";
 import { loadSvgSprite } from "../lib/loadSvgSprite";
 import type { ParticleImages } from "../elements/bubble";
 
@@ -45,6 +52,18 @@ const Scene: React.FC<Props> = () => {
       // shows through; clear() still wipes the previous frame's trails.
       p5.clear();
       if (!scene) return;
+
+      // Idle reset: once nothing's been tapped / the device is still and the
+      // particles have *mostly* settled, gravity fades back to free-float.
+      const dt = Math.min(p5.deltaTime / 1000, 1 / 30);
+      const stillCount = scene.bubbles.filter((b) => b.isStill).length;
+      const particlesStill = stillCount >= scene.bubbles.length * 0.8;
+      updateGravity(dt, particlesStill);
+
+      // Resolve particle-particle overlaps before drawing. A couple of passes
+      // settle clusters where pushing one pair apart nudges another into overlap.
+      resolveCollisions(scene.bubbles);
+
       for (const container of scene.containers) {
         container.display(p5);
       }
@@ -59,8 +78,10 @@ const Scene: React.FC<Props> = () => {
     };
 
     p5.mousePressed = () => {
-      // First touch doubles as the iOS user gesture that unlocks motion access.
+      // First touch doubles as the iOS user gesture that unlocks motion access;
+      // every tap also resets the idle-reset timer.
       startGravityTracking();
+      noteInteraction();
       if (!scene) return;
       // Let elements handle the tap first; if a link consumed it, don't also emit
       // a gravity wave — just open the link.
