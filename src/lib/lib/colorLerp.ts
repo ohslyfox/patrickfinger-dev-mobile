@@ -6,13 +6,16 @@ export interface Color {
   b: number;
 }
 
-export const rainbowColors: Color[] = [
-  { r: 255, g: 0, b: 0 },
-  { r: 255, g: 255, b: 0 },
-  { r: 0, g: 255, b: 0 },
-  { r: 0, g: 255, b: 255 },
-  { r: 75, g: 25, b: 255 },
-  { r: 255, g: 0, b: 255 },
+// Saturated galaxy tones — clearly chromatic blue/teal/violet/pink/gold while
+// staying luminous over the dark gradient sky. Deeper than the old near-white
+// pastels so the particles (and tinted SVG icons) actually read as colored.
+export const pastelGalaxyColors: Color[] = [
+  { r: 96, g: 178, b: 255 }, // vivid sky blue
+  { r: 64, g: 220, b: 230 }, // bright cyan-teal
+  { r: 140, g: 130, b: 255 }, // electric periwinkle
+  { r: 196, g: 120, b: 240 }, // violet-magenta
+  { r: 255, g: 130, b: 200 }, // hot pink
+  { r: 255, g: 200, b: 130 }, // warm gold (star glow)
 ];
 
 export const grayScaleColors: Color[] = [

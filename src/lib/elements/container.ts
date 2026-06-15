@@ -20,10 +20,14 @@ class Container implements ElementContainer {
     }
   }
 
-  public mousePressed(p5: P5CanvasInstance): void {
+  // Returns true if any element consumed the tap (so the caller can skip other
+  // tap effects, e.g. a ripple, when a link was opened).
+  public mousePressed(p5: P5CanvasInstance): boolean {
+    let consumed = false;
     for (const elem of this.elements) {
-      elem.mousePressed(p5);
+      if (elem.mousePressed(p5)) consumed = true;
     }
+    return consumed;
   }
 
   public mouseReleased(p5: P5CanvasInstance): void {
