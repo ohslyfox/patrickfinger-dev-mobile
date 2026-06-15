@@ -6,13 +6,16 @@ export interface Color {
   b: number;
 }
 
-export const rainbowColors: Color[] = [
-  { r: 255, g: 0, b: 0 },
-  { r: 255, g: 255, b: 0 },
-  { r: 0, g: 255, b: 0 },
-  { r: 0, g: 255, b: 255 },
-  { r: 75, g: 25, b: 255 },
-  { r: 255, g: 0, b: 255 },
+// Soft, near-white pastels tinted toward the galaxy backdrop's teal/blue/mauve,
+// so the particles read as gently colored starlight shaded into the gradient sky
+// rather than bold primaries.
+export const pastelGalaxyColors: Color[] = [
+  { r: 207, g: 232, b: 255 }, // pale sky blue (#cfe8ff)
+  { r: 159, g: 212, b: 255 }, // light azure (#9fd4ff)
+  { r: 180, g: 224, b: 226 }, // soft teal-white
+  { r: 200, g: 196, b: 240 }, // periwinkle lavender
+  { r: 226, g: 195, b: 224 }, // dusty mauve-pink (#b89bc4 lightened)
+  { r: 240, g: 224, b: 236 }, // warm white with a pink cast
 ];
 
 export const grayScaleColors: Color[] = [

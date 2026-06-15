@@ -1,0 +1,51 @@
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  /* Echoes the desktop scene's dark gradient sky (#007ba7 teal / #6f456e mauve
+     diffused into a near-black floor). */
+  background:
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(0, 123, 167, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 75% 80%,
+      rgba(111, 69, 110, 0.14),
+      transparent 60%
+    ),
+    #0a0610;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--star-color, #cfe8ff);
+  /* Soft glow to mirror the bloomed stars in the real scene. */
+  box-shadow: 0 0 6px var(--star-color, #cfe8ff);
+  opacity: 0;
+  animation: twinkle var(--twinkle-duration, 2.4s) ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+  will-change: opacity, transform;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star {
+    animation: none;
+    opacity: 0.5;
+  }
+}
